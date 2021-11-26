@@ -1,3 +1,4 @@
 build
-src/mikktspace.c
+src/*.c
 *.pyd
+*.egg-info

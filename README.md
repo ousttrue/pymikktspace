@@ -1,2 +1,3 @@
 # pymikktspace
-mikktspace for python
+
+wrap <https://github.com/mmikk/MikkTSpace> for python.

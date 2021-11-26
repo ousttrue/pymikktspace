@@ -1,0 +1,3 @@
+build
+src/mikktspace.c
+*.pyd

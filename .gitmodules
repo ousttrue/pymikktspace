@@ -1,0 +1,3 @@
+[submodule "MikkTSpace"]
+	path = MikkTSpace
+	url = https://github.com/mmikk/MikkTSpace

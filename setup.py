@@ -10,10 +10,10 @@ version = get_version()
 ext = Extension("mikktspace",
                 sources=[
                     "src/_version.py",
-                    "src/mikktspace.pyx", 
-                    "MikkTSpace/mikktspace.c"
+                    "src/mikktspace.pyx",
+                    "_external/MikkTSpace/mikktspace.c"
                 ],
-                include_dirs=[str(HERE)],
+                include_dirs=[str(HERE / '_external/MikkTSpace')],
                 # language='c++',
                 )
 

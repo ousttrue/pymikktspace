@@ -1,4 +1,4 @@
-cdef extern from "MikkTSpace/mikktspace.h":
+cdef extern from "mikktspace.h":
     ctypedef int tbool;
 
     struct SMikkTSpaceInterface:

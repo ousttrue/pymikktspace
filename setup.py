@@ -10,9 +10,11 @@ version = get_version()
 ext = Extension("mikktspace",
                 sources=[
                     "src/_version.py",
-                    "src/mikktspace.pyx", "MikkTSpace/mikktspace.c"
+                    "src/mikktspace.pyx", 
+                    "MikkTSpace/mikktspace.c"
                 ],
                 include_dirs=[str(HERE)],
+                # language='c++',
                 )
 
 setup(
@@ -22,4 +24,4 @@ setup(
     author='ousttrue',
     author_email='ousttrue@gmail.com',
     url='https://github.com/ousttrue/pymikktspace',
-    ext_modules=cythonize(ext))
+    ext_modules=cythonize(ext, compiler_directives={'language_level': "3"}))

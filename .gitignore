@@ -1,4 +1,6 @@
 build
 src/*.c
+src/*.cpp
 *.pyd
 *.egg-info
+*.pyc

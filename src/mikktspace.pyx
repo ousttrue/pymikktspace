@@ -51,11 +51,29 @@ cdef extern from "MikkTSpace/mikktspace.h":
     tbool genTangSpace(const SMikkTSpaceContext * pContext, const float fAngularThreshold)
 
 
+from cython.cimports.libc.stdlib import malloc, free
+
+
+cdef int getNumFaces(const SMikkTSpaceContext * pContext):
+    return 3
+
+
 cdef class Context:
-    cdef SMikkTSpaceContext *m_context
+    cdef SMikkTSpaceInterface m_interface
+    cdef SMikkTSpaceContext m_context
+
+    def __cinit__(self, indices_count: int, indices: bytes, position_count: int, position: bytes, normal: bytes, uv: bytes, tangent: bytes):
+        self.m_interface.m_getNumFaces = &getNumFaces
+        self.m_context.m_pInterface = &self.m_interface
 
     cpdef gen_default(self):
-        return genTangSpaceDefault(self.m_context)
+        return genTangSpaceDefault(&self.m_context)
 
     cpdef gen(self, float fAngularThreshold):
-        return genTangSpaceDefault(self.m_context)
+        return genTangSpace(&self.m_context, fAngularThreshold)
+
+
+def gen_default(position_count: int, position: bytes, normal: bytes, uv: bytes, indices_count: int, indices: bytes)->bytes:
+    tangent = b'\0' * (4 * 4 * position_count)
+    c = Context(indices_count, indices, position_count, position, normal, uv, tangent)
+    return tangent

@@ -2,18 +2,62 @@ import unittest
 import os
 import pathlib
 import json
-from typing import Tuple
+from typing import NamedTuple, Tuple, Type
+import ctypes
 import mikktspace
 
 
 URI_MAP = {}
 
 
-def get_accessor_bytes(path: pathlib.Path, gltf, accessor_index) -> Tuple[bytes, int]:
+class TypedBytes(NamedTuple):
+    data: bytes
+    element_type: Type[ctypes._SimpleCData]
+    element_count: int = 1
+
+    def get_stride(self) -> int:
+        return ctypes.sizeof(self.element_type) * self.element_count
+
+    def get_count(self) -> int:
+        return len(self.data) // self.get_stride()
+
+    def get(self, index: int) -> bytes:
+        stride = self.get_stride()
+        begin = stride * index
+        return self.data[begin:begin+stride]
+
+
+def get_ctype(component_type) -> Type[ctypes._SimpleCData]:
+    match component_type:
+        case 5123:
+            return ctypes.c_ushort
+        case 5126:
+            return ctypes.c_float
+
+        case _:
+            raise Exception()
+
+
+def get_type_count(type) -> int:
+    match type:
+        case "SCALAR": return 1
+        case "VEC2": return 2
+        case "VEC3": return 3
+        case "VEC4": return 4
+        case "MAT2": return 4
+        case "MAT3": return 9
+        case "MAT4": return 16
+        case _:
+            raise Exception()
+
+
+def get_accessor_bytes(path: pathlib.Path, gltf, accessor_index) -> TypedBytes:
     match gltf['accessors'][accessor_index]:
         case {
             'bufferView': bufferview_index,
-            'count': count
+            'count': count,
+            'componentType': component_type,
+            'type': type
         }:
             match gltf['bufferViews'][bufferview_index]:
                 case {
@@ -29,7 +73,8 @@ def get_accessor_bytes(path: pathlib.Path, gltf, accessor_index) -> Tuple[bytes,
                             if not data:
                                 data = (path.parent / uri).read_bytes()
                                 URI_MAP[uri] = data
-                            return data[byte_offset:byte_offset+byte_length], count
+                            slice = data[byte_offset:byte_offset+byte_length]
+                            return TypedBytes(slice, get_ctype(component_type), get_type_count(type))
 
     raise Exception()
 
@@ -46,23 +91,28 @@ class TestGltf(unittest.TestCase):
         mesh = gltf['meshes'][0]
         prim = mesh['primitives'][0]
 
-        indices, indices_count = get_accessor_bytes(
+        indices = get_accessor_bytes(
             file, gltf, prim['indices'])
+        indices = (indices.element_type * indices.get_count()
+                   ).from_buffer_copy(indices.data)
         match prim['attributes']:
             case {
                 'POSITION': position_accessor_index,
                 'NORMAL': normal_accessor_index,
                 'TEXCOORD_0': uv_accessor_index,
             }:
-                position, position_count = get_accessor_bytes(
+                position = get_accessor_bytes(
                     file, gltf, position_accessor_index)
-                normal, normal_count = get_accessor_bytes(
+                normal = get_accessor_bytes(
                     file, gltf, normal_accessor_index)
-                uv, uv_count = get_accessor_bytes(
+                uv = get_accessor_bytes(
                     file, gltf, uv_accessor_index)
-                tangent = mikktspace.gen_default(
-                    position_count, position, normal, uv, indices_count, indices)
-                self.assertEqual(position_count * 4 * 4, len(tangent))
+                tangent = mikktspace.gen_default(indices, position, normal, uv)
+                self.assertEqual(position.get_count() * 4, len(tangent))
+
+                # debug
+                # pathlib.Path('tmp.bin').write_text(
+                #     json.dumps([x for x in tangent]))
             case _:
                 raise Exception()
 

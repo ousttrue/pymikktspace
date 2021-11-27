@@ -1,6 +1,7 @@
 build
 src/*.c
 src/*.cpp
+src/_version.py
 *.pyd
 *.egg-info
 *.pyc

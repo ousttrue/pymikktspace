@@ -51,62 +51,48 @@ cdef extern from "mikktspace.h":
     tbool genTangSpace(const SMikkTSpaceContext * pContext, const float fAngularThreshold)
 
 
-from typing import NamedTuple, Optional
-import ctypes
-import struct
-import array
-
-
-def get_stride(self)->int:
-    return ctypes.sizeof(self[1]) * self[2]
-
-def get_count(self)->int:
-    return len(self[0]) // get_stride(self)
-
-def get(self, index: int)->bytes:
-    stride = get_stride(self)
-    begin = stride * index
-    return self[0][begin:begin+stride]
-
-
 cdef int getNumFaces(const SMikkTSpaceContext * pContext):
     context = <object>pContext.m_pUserData
     return len(context.indices) // 3
 
 
 cdef int getNumVerticesOfFace(const SMikkTSpaceContext * pContext, const int iFace):
+    '''
+    triangle only
+    '''
     return 3
 
 
 cdef void getPosition(const SMikkTSpaceContext * pContext, float fvPosOut[], const int iFace, const int iVert):
     context = <object>pContext.m_pUserData
-    index = context.indices[iFace * 3 + iVert]
-    x, y, z = struct.unpack('fff', get(context.position, index))
-    fvPosOut[0] = x
-    fvPosOut[1] = y
-    fvPosOut[2] = z
+    index = context.indices[iFace * 3 + iVert] * 3
+    
+    fvPosOut[0] = context.position[index]
+    fvPosOut[1] = context.position[index+1]
+    fvPosOut[2] = context.position[index+2]
 
 
 cdef void getNormal(const SMikkTSpaceContext * pContext, float fvNormOut[], const int iFace, const int iVert):
     context = <object>pContext.m_pUserData
-    index = context.indices[iFace * 3 + iVert]
-    x, y, z = struct.unpack('fff', get(context.normal, index))
-    fvNormOut[0] = x
-    fvNormOut[1] = y
-    fvNormOut[2] = z
+    index = context.indices[iFace * 3 + iVert] * 3
+
+    fvNormOut[0] = context.normal[index]
+    fvNormOut[1] = context.normal[index+1]
+    fvNormOut[2] = context.normal[index+2]
 
 
 cdef void getTexCoord(const SMikkTSpaceContext * pContext, float fvTexcOut[], const int iFace, const int iVert):
     context = <object>pContext.m_pUserData
-    index = context.indices[iFace * 3 + iVert]
-    x, y = struct.unpack('ff', get(context.uv, index))
-    fvTexcOut[0] = x
-    fvTexcOut[1] = y
+    index = context.indices[iFace * 3 + iVert] * 2
+
+    fvTexcOut[0] = context.uv[index]
+    fvTexcOut[1] = context.uv[index+1]
 
 
 cdef void setTSpaceBasic(const SMikkTSpaceContext * pContext, const float fvTangent[], const float fSign, const int iFace, const int iVert):
     context = <object>pContext.m_pUserData
     index = context.indices[iFace * 3 + iVert] * 4
+
     context.tangent[index] = fvTangent[0]
     context.tangent[index+1] = fvTangent[1]
     context.tangent[index+2] = fvTangent[2]
@@ -117,12 +103,12 @@ cdef class Context:
     cdef SMikkTSpaceInterface m_interface
     cdef SMikkTSpaceContext m_context
     cdef public object indices
-    cdef public object position
-    cdef public object normal
-    cdef public object uv
-    cdef public object tangent
+    cdef public float[::1] position
+    cdef public float[::1] normal
+    cdef public float[::1] uv
+    cdef public float[::1] tangent
 
-    def __cinit__(self, indices, position, normal, uv, tangent: array.array):
+    def __cinit__(self, indices, float[::1]position, float[::1]normal, float[::1]uv, float[::1]tangent):
         self.indices = indices
         self.position = position
         self.normal = normal
@@ -146,8 +132,10 @@ cdef class Context:
 #        return genTangSpace(&self.m_context, fAngularThreshold)
 
 
-def gen_default(indices, position, normal, uv)->Optional[array.array]:
-    tangent = array.array('f', [0.0] * (4 * position.get_count()))
+def gen_default(indices, const float[::1]position, const float[::1]normal, const float[::1]uv):
+    import array
+    position_count = len(position) // 3
+    tangent = array.array('f', [0.0] * (4 * position_count))
     c = Context(indices, position, normal, uv, tangent)
     if c.gen_default():
         return tangent

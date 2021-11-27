@@ -93,8 +93,6 @@ class TestGltf(unittest.TestCase):
 
         indices = get_accessor_bytes(
             file, gltf, prim['indices'])
-        indices = (indices.element_type * indices.get_count()
-                   ).from_buffer_copy(indices.data)
         match prim['attributes']:
             case {
                 'POSITION': position_accessor_index,
@@ -107,7 +105,12 @@ class TestGltf(unittest.TestCase):
                     file, gltf, normal_accessor_index)
                 uv = get_accessor_bytes(
                     file, gltf, uv_accessor_index)
-                tangent = mikktspace.gen_default(indices, position, normal, uv)
+                tangent = mikktspace.gen_default(memoryview(indices.data).cast(indices.element_type._type_),
+                                                 memoryview(
+                                                     position.data).cast('f'),
+                                                 memoryview(
+                                                     normal.data).cast('f'),
+                                                 memoryview(uv.data).cast('f'))
                 self.assertEqual(position.get_count() * 4, len(tangent))
 
                 # debug

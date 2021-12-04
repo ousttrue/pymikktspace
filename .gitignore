@@ -1,7 +1,8 @@
 build
-src/*.c
-src/*.cpp
-src/_version.py
+src/**/*.c
+src/**/*.cpp
+src/mikktspace/_version.py
 *.pyd
 *.egg-info
 *.pyc
+*.egg

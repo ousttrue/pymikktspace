@@ -1,3 +1,6 @@
 
 [build-system]
 requires = ["setuptools>=45", "wheel", "setuptools_scm>=6.2", "cython"]
+
+[tool.setuptools_scm]
+write_to = "src/mikktspace/_version.py"
